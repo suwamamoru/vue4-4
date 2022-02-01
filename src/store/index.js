@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import createPersistedState from 'vuex-persistedstate'
 import router from '@/router'
 import firebase from 'firebase'
 
@@ -28,10 +29,12 @@ export default new Vuex.Store({
       wallets: []
     },
     update: {
-      currentId: '',
-      afterWallet: '',
+      watchId: '',
+      afterSigninWallet: '',
       totalWallet: ''
-    }
+    },
+    unsubscribe1: null,
+    unsubscribe2: null
   },
   mutations: {
     setUser(state, user) {
@@ -49,11 +52,11 @@ export default new Vuex.Store({
     setErrorMessage(state, errorMessage) {
       state.error.errorMessage = errorMessage
     },
-    setCurrentId(state, computedCurrentId) {
-      state.update.currentId = computedCurrentId
+    setWatchId(state, computedWatchId) {
+      state.update.watchId = computedWatchId
     },
-    setAfterWallet(state, computedAfterWallet) {
-      state.update.afterWallet = computedAfterWallet
+    setAfterSigninWallet(state, computedAfterSigninWallet) {
+      state.update.afterSigninWallet = computedAfterSigninWallet
     },
     setTotalWallet(state, computedTotalWallet) {
       state.update.totalWallet = computedTotalWallet
@@ -68,6 +71,15 @@ export default new Vuex.Store({
     },
     getPassword: ({commit}, password) => {
       commit('setPassword', password)
+    },
+    getWatchId: ({commit}, computedWatchId) => {
+      commit('setWatchId', computedWatchId)
+    },
+    getAfterSigninWallet: ({commit}, computedAfterSigninWallet) => {
+      commit('setAfterSigninWallet', computedAfterSigninWallet)
+    },
+    getTotalWallet: ({commit}, computedTotalWallet) => {
+      commit('setTotalWallet', computedTotalWallet)
     },
     signupInput({state}) {
       firebase.auth().createUserWithEmailAndPassword(state.input.email, state.input.password)
@@ -144,29 +156,28 @@ export default new Vuex.Store({
         }
       })
     },
-    getData({state}) {
-      firebase.firestore().collection('users').where('email','==',state.input.email).get()
-      .then(querySnapshot => {
+    startListener({state}) {
+      this.unsubscribe1 = firebase.firestore().collection('users').where('email','==',state.input.email).onSnapshot(querySnapshot => {
         querySnapshot.forEach(doc => {
           state.signin.id = doc.id
           state.signin.user = doc.data().user
           state.signin.wallet = doc.data().wallet
         })
       })
-      .catch(error => {
-        console.error(error)
-      })
-      firebase.firestore().collection('users').where('email','!=',state.input.email).get()
-      .then(querySnapshot => {
+      this.unsubscribe2 = firebase.firestore().collection('users').where('email','!=',state.input.email).onSnapshot(querySnapshot => {
+        state.receive.ids = []
+        state.receive.users = []
+        state.receive.wallets = []
         querySnapshot.forEach(doc => {
           state.receive.ids.push(doc.id)
           state.receive.users.push(doc.data().user)
           state.receive.wallets.push(doc.data().wallet)
         })
       })
-      .catch(error => {
-        console.error(error)
-      })
+    },
+    stopListener() {
+      this.unsubscribe1()
+      this.unsubscribe2()
     },
     logout() {
       firebase.auth().signOut()
@@ -177,23 +188,13 @@ export default new Vuex.Store({
         console.error(error)
       })
     },
-    getCurrentId: ({commit}, computedCurrentId) => {
-      commit('setCurrentId', computedCurrentId)
-    },
-    getAfterWallet: ({commit}, computedAfterWallet) => {
-      commit('setAfterWallet', computedAfterWallet)
-    },
-    getTotalWallet: ({commit}, computedTotalWallet) => {
-      commit('setTotalWallet', computedTotalWallet)
-    },
     submit({state}) {
       firebase.firestore().collection('users').doc(state.signin.id).update({
-        wallet: state.update.afterWallet
+        wallet: state.update.afterSigninWallet
       }),
-      firebase.firestore().collection('users').doc(state.update.currentId).update({
+      firebase.firestore().collection('users').doc(state.update.watchId).update({
         wallet: state.update.totalWallet
       })
-      
     }
   },
   getters: {
@@ -230,14 +231,20 @@ export default new Vuex.Store({
     receiveWallets: state => {
       return state.receive.wallets
     },
-    updateCurrentId: state => {
-      return state.update.currentId
+    updateWatchId: state => {
+      return state.update.watchId
     },
-    updateAfterWallet: state => {
-      return state.update.afterWallet
+    updateAfterSigninWallet: state => {
+      return state.update.afterSigninWallet
     },
     updateTotalWallet: state => {
       return state.update.totalWallet
     },
-  }
+  },
+  plugins: [createPersistedState(
+    {
+      key: 'vuex',
+      storage: window.sessionStorage
+    }
+  )]
 })

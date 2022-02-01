@@ -21,18 +21,18 @@
         </tr>
       </table>
     </div>
-    <modal @close="closeWallet()" v-if="walletModal">
-      <p>{{watchUser}}さんの残高</p>
-      <p>{{watchWallet}}</p>
+    <modal @close="closeWallet()" v-if="modalStatus.walletModal">
+      <p>{{watch.watchUser}}さんの残高</p>
+      <p>{{watch.watchWallet}}</p>
       <template slot="footer">
         <button class="close-buttons" @click="closeWallet()">close</button>
       </template>
     </modal>
-    <modal @close="closeSubmit()" v-if="submitModal">
+    <modal @close="closeSubmit()" v-if="modalStatus.submitModal">
       <p>あなたの残高:{{$store.getters.signinWallet}}</p>
       <p>送る金額</p>
-      <input type="number" min="0" v-model.number="giveWallet">
-      <p class="error" v-show="errorShow">{{errorMessage}}</p>
+      <input type="number" min="0" v-model.number="cal.giveWallet">
+      <p class="error" v-show="error.errorShow">{{error.errorMessage}}</p>
       <template slot="footer">
         <button class="close-buttons" @click="closeSubmit()">送信</button>
       </template>
@@ -52,38 +52,48 @@ export default {
   },
   data() {
     return {
-      unsubscribe: null,
-      walletModal: false,
-      submitModal: false,
-      watchUser: '',
-      watchWallet: '',
-      giveWallet: '',
-      currentId: '',
-      currentWallet: '',
-      afterWallet: '',
-      totalWallet: '',
-      errorShow: false,
-      errorMessage: '残高を超える投げ銭はできません。'
+      modalStatus: {
+        walletModal: false,
+        submitModal: false
+      },
+      watch: {
+        watchId: '',
+        watchUser: '',
+        watchWallet: ''
+      },
+      error: {
+        errorShow: false,
+        errorMessage: '残高を超える投げ銭はできません。'
+      },
+      cal: {
+        giveWallet: '',
+        afterSigninWallet: '',
+        totalWallet: ''
+      }
+
     }
   },
   mounted() {
-    this.getData()
+    this.startListener()
+  },
+  beforeDestroy() {
+    this.stopListener()
   },
   computed: {
-    computedCurrentId: {
+    computedWatchId: {
       get() {
-        return this.$store.getters.updateCurrentId
+        return this.$store.getters.updateWatchId
       },
       set(value) {
-        this.$store.dispatch("getCurrentId", value)
+        this.$store.dispatch("getWatchId", value)
       }
     },
-    computedAfterWallet: {
+    computedAfterSigninWallet: {
       get() {
-        return this.$store.getters.updateAfterWallet
+        return this.$store.getters.updateAfterSigninWallet
       },
       set(value) {
-        this.$store.dispatch("getAfterWallet", value)
+        this.$store.dispatch("getAfterSigninWallet", value)
       }
     },
     computedTotalWallet: {
@@ -96,47 +106,47 @@ export default {
     },
   },
   methods: {
-    getData() {
-      this.$store.dispatch('getData')
+    startListener() {
+      this.$store.dispatch('startListener')
+    },
+    stopListener() {
+      this.$store.dispatch('stopListener')
     },
     logout() {
       this.$store.dispatch('logout')
     },
     openWallet(index) {
-      this.watchUser = this.$store.getters.receiveUsers[index]
-      this.watchWallet = this.$store.getters.receiveWallets[index]
-      this.walletModal = true
+      this.watch.watchUser = this.$store.getters.receiveUsers[index]
+      this.watch.watchWallet = this.$store.getters.receiveWallets[index]
+      this.modalStatus.walletModal = true
     },
     closeWallet() {
-      this.walletModal = false
+      this.modalStatus.walletModal = false
     },
     openSubmit(index) {
-      this.giveWallet = ''
-      this.currentId = this.$store.getters.receiveIds[index]
-      this.currentWallet = this.$store.getters.receiveWallets[index]
-      this.totalWallet = ''
-      this.errorShow = false
-      this.submitModal = true
+      this.watch.watchId = this.$store.getters.receiveIds[index]
+      this.watch.watchWallet = this.$store.getters.receiveWallets[index]
+      this.cal.giveWallet = ''
+      this.cal.totalWallet = ''
+      this.error.errorShow = false
+      this.modalStatus.submitModal = true
     },
     closeSubmit() {
-      if(this.giveWallet === '') {
-        this.giveWallet = 0
+      if(this.cal.giveWallet === '') {
+        this.cal.giveWallet = 0
       }
-      this.afterWallet = this.currentWallet - this.giveWallet
-      console.log('currentWallet', this.currentWallet)
-      console.log('giveWallet', this.giveWallet)
-      console.log('afterWallet', this.afterWallet)
-      if(this.afterWallet < 0) {
-        this.errorShow = true
+      this.cal.afterSigninWallet = this.$store.getters.signinWallet - this.cal.giveWallet
+      if(this.cal.afterSigninWallet < 0) {
+        this.error.errorShow = true
         return
       }
-      this.totalWallet = this.currentWallet + this.giveWallet
-      this.computedCurrentId = this.currentId
-      this.computedAfterWallet = this.afterWallet
-      this.computedTotalWallet = this.totalWallet
+      this.cal.totalWallet = this.watch.watchWallet + this.cal.giveWallet
+      this.computedWatchId = this.watch.watchId
+      this.computedAfterSigninWallet = this.cal.afterSigninWallet
+      this.computedTotalWallet = this.cal.totalWallet
       this.$store.dispatch('submit')
-      this.$store.dispatch('getData')
-      this.submitModal = false
+      //this.$store.dispatch('getData')
+      this.modalStatus.submitModal = false
     }
   }
 }
