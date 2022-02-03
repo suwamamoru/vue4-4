@@ -188,12 +188,36 @@ export default new Vuex.Store({
         console.error(error)
       })
     },
-    submit({state}) {
-      firebase.firestore().collection('users').doc(state.signin.id).update({
-        wallet: state.update.afterSigninWallet
-      }),
-      firebase.firestore().collection('users').doc(state.update.watchId).update({
-        wallet: state.update.totalWallet
+    submitSigninDoc({state}) {
+    const db = firebase.firestore()
+    const signinDocRef = db.collection('users').doc(state.signin.id)
+    return db.runTransaction(transaction => {
+        return transaction.get(signinDocRef).then(signinDoc => {
+          if(!signinDoc.exists) {
+            throw "SigninDoc does not exist!"
+          }
+          transaction.update(signinDocRef, {wallet: state.update.afterSigninWallet})
+        }).then(() => {
+          console.log("SigninDoc transaction successfully committed!")
+        }).catch((error) => {
+          console.error("SigninDoc transaction failed: ", error)
+        });
+      })
+    },
+    submitWatchDoc({state}) {
+    const db = firebase.firestore()
+    const watchDocRef = db.collection('users').doc(state.update.watchId)
+    return db.runTransaction(transaction => {
+        return transaction.get(watchDocRef).then(watchDoc => {
+          if(!watchDoc.exists) {
+            throw "WatchDoc does not exist!"
+          }
+          transaction.update(watchDocRef, {wallet: state.update.totalWallet})
+        })
+      }).then(() => {
+        console.log("WatchDoc transaction successfully committed!")
+      }).catch((error) => {
+        console.error("WatchDoc transaction failed: ", error)
       })
     }
   },
