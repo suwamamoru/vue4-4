@@ -144,8 +144,7 @@ export default {
       this.computedWatchId = this.watch.watchId
       this.computedAfterSigninWallet = this.cal.afterSigninWallet
       this.computedTotalWallet = this.cal.totalWallet
-      this.$store.dispatch('submitSigninDoc')
-      this.$store.dispatch('submitWatchDoc')
+      this.$store.dispatch('submit')
       this.modalStatus.submitModal = false
     }
   }
